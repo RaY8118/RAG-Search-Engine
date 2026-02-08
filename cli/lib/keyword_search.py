@@ -1,3 +1,4 @@
+import math
 import os
 import pickle
 import string
@@ -33,6 +34,16 @@ class InvertedIndex:
             raise ValueError("Can only have 1 token")
         return self.term_frequencies[doc_id][token[0]]
 
+    def get_idf(self, term):
+        token = tokenize_text(term)
+        if len(token) != 1:
+            raise ValueError("Can only have 1 token")
+
+        token = token[0]
+        doc_count = len(self.docmap)
+        term_match_doc_count = len(self.index[token])
+        return math.log((doc_count + 1) / (term_match_doc_count + 1))
+
     def build(self):
         movies = load_movies()
         for movie in movies:
@@ -67,6 +78,13 @@ def tf_command(doc_id, term):
     idx = InvertedIndex()
     idx.load()
     print(idx.get_tf(doc_id, term))
+
+
+def idf_command(term):
+    idx = InvertedIndex()
+    idx.load()
+    idf = idx.get_idf(term)
+    print(f"Inverse document frequeny of '{term}': {idf:.2f}")
 
 
 def build_command():
