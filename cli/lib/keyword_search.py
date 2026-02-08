@@ -4,7 +4,7 @@ import pickle
 import string
 from collections import Counter, defaultdict
 
-from lib.search_utils import CACHE_PATH, load_movies, load_stopwords
+from lib.search_utils import BM25_B, BM25_K1, CACHE_PATH, load_movies, load_stopwords
 from nltk.stem import PorterStemmer
 
 stemmer = PorterStemmer()
@@ -18,12 +18,24 @@ class InvertedIndex:
         self.docmap_path = CACHE_PATH / "docmap.pkl"
         self.term_frequencies = defaultdict(Counter)
         self.term_frequencies_path = CACHE_PATH / "term_frequencies.pkl"
+        self.doc_lengths = {}
+        self.doc_length_path = CACHE_PATH / "doc_lengths.pkl"
 
     def __add_document(self, doc_id, text):
         tokens = tokenize_text(text)
         for token in set(tokens):
             self.index[token].add(doc_id)
         self.term_frequencies[doc_id].update(tokens)
+        self.doc_lengths[doc_id] = len(tokens)
+
+    def __get_avg_doc_length(self) -> float:
+        lengths = list(self.doc_lengths.values())
+        if len(lengths) == 0:
+            return 0.0
+        ttl = 0
+        for l in lengths:
+            ttl += l
+        return ttl / len(lengths)
 
     def get_documents(self, term):
         return sorted(list(self.index[term]))
@@ -33,6 +45,16 @@ class InvertedIndex:
         if len(token) != 1:
             raise ValueError("Can only have 1 token")
         return self.term_frequencies[doc_id][token[0]]
+
+    def get_bm25_tf(self, doc_id, term, k1=BM25_K1, b=BM25_B):
+        tf = self.get_tf(doc_id, term)
+        doc_length = self.doc_lengths[doc_id]
+        avg_doc_length = self.__get_avg_doc_length()
+        if avg_doc_length > 0:
+            length_norm = 1 - b + b * (doc_length / avg_doc_length)
+        else:
+            length_norm = 1
+        return (tf * (k1 + 1)) / (tf + k1 * length_norm)
 
     def get_idf(self, term):
         tokens = tokenize_text(term)
@@ -59,6 +81,30 @@ class InvertedIndex:
         idf = self.get_idf(term)
         return tf * idf
 
+    def get_bm25(self, doc_id, term):
+        tf = self.get_bm25_tf(doc_id, term)
+        idf = self.getbm25_idf(term)
+        return tf * idf
+
+    def bm25_search(self, query, limit=5):
+        query_tokens = tokenize_text(query)
+        scores = {}
+        for doc_id in self.docmap:
+            score = 0
+            for token in query_tokens:
+                score += self.get_bm25(doc_id, token)
+            scores[doc_id] = score
+
+        sorted_scores = sorted(scores.items(), key=lambda x: x[1], reverse=True)
+
+        results = sorted_scores[:limit]
+        format_results = []
+        for doc_id, score in results:
+            title = self.docmap[doc_id]["title"]
+            format_results.append({"doc_id": doc_id, "title": title, "score": score})
+
+        return format_results
+
     def build(self):
         movies = load_movies()
         for movie in movies:
@@ -78,6 +124,9 @@ class InvertedIndex:
         with open(self.term_frequencies_path, "wb") as f:
             pickle.dump(self.term_frequencies, f)
 
+        with open(self.doc_length_path, "wb") as f:
+            pickle.dump(self.doc_lengths, f)
+
     def load(self):
         with open(self.index_path, "rb") as f:
             self.index = pickle.load(f)
@@ -88,11 +137,20 @@ class InvertedIndex:
         with open(self.term_frequencies_path, "rb") as f:
             self.term_frequencies = pickle.load(f)
 
+        with open(self.doc_length_path, "rb") as f:
+            self.doc_lengths = pickle.load(f)
+
 
 def tf_command(doc_id, term):
     idx = InvertedIndex()
     idx.load()
     print(idx.get_tf(doc_id, term))
+
+
+def bm25_tf_command(doc_id, term, k1=BM25_K1, b=BM25_B):
+    inverted_index = InvertedIndex()
+    inverted_index.load()
+    return inverted_index.get_bm25_tf(doc_id, term, k1, b)
 
 
 def idf_command(term):
@@ -111,6 +169,12 @@ def tfidf_command(doc_id, term):
     idx = InvertedIndex()
     idx.build()
     return idx.get_tfidf(doc_id, term)
+
+
+def bm25_search(query):
+    inverted_index = InvertedIndex()
+    inverted_index.load()
+    return inverted_index.bm25_search(query)
 
 
 def build_command():

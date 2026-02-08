@@ -1,6 +1,9 @@
 import json
 from pathlib import Path
 
+BM25_K1 = 1.5
+BM25_B = 0.75
+
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 DATA_PATH = PROJECT_ROOT / "data/"
 MOVIES_PATH = DATA_PATH / "movies.json"
@@ -19,4 +22,5 @@ def load_movies():
 def load_stopwords():
     with open(STOPWORDS_PATH, "r") as f:
         data = f.read().splitlines()
+    return data
     return data
