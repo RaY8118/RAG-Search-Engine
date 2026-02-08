@@ -44,6 +44,11 @@ class InvertedIndex:
         term_match_doc_count = len(self.index[token])
         return math.log((doc_count + 1) / (term_match_doc_count + 1))
 
+    def get_tfidf(self, doc_id, term):
+        tf = self.get_tf(doc_id, term)
+        idf = self.get_idf(term)
+        return tf * idf
+
     def build(self):
         movies = load_movies()
         for movie in movies:
@@ -85,6 +90,13 @@ def idf_command(term):
     idx.load()
     idf = idx.get_idf(term)
     print(f"Inverse document frequeny of '{term}': {idf:.2f}")
+
+
+def tfidf_command(doc_id, term):
+    idx = InvertedIndex()
+    idx.build()
+    tf_idf = idx.get_tfidf(doc_id, term)
+    print(f"TF-IDF score of '{term}' in document '{doc_id}': {tf_idf:.2f}")
 
 
 def build_command():
