@@ -10,3 +10,4 @@ wheels/
 
 # Virtual environments
 .venv
+cache/movie_embedding.npy
