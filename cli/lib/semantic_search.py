@@ -1,3 +1,4 @@
+import re
 from pathlib import Path
 
 import numpy as np
@@ -65,7 +66,53 @@ class SemanticSearch:
         return res
 
 
-def search(query, limit=5):
+def semantic_chunking(
+    text,
+    overlap=0,
+    max_chunk_size=4,
+):
+    sentences = re.split(r"(?<=[.!?])\s+", text)
+    chunks = []
+    step_size = max_chunk_size - overlap
+    for i in range(0, len(sentences), step_size):
+        chunk_sentences = sentences[i : i + max_chunk_size]
+        if len(chunk_sentences) <= overlap:
+            break
+        chunks.append(" ".join(chunk_sentences))
+    return chunks
+
+
+def chunk_text_semantic(
+    text: str,
+    overlap: int = 0,
+    max_chunk_size: int = 4,
+):
+    chunks = semantic_chunking(text, overlap, max_chunk_size)
+    print(f"Semantic chunking {len(text)} characters")
+    for i, chunk in enumerate(chunks):
+        print(f"{i + 1}. {chunk}")
+
+
+def fixed_sized_chunking(text, overlap, chunk_size=200):
+    words = text.split()
+    chunks = []
+    step_size = chunk_size - overlap
+    for i in range(0, len(words), step_size):
+        chunk_words = words[i : i + chunk_size]
+        if len(chunk_words) <= overlap:
+            break
+        chunks.append(" ".join(chunk_words))
+    return chunks
+
+
+def chunk_text(text: str, overlap: int, chunk_size: int = 200):
+    chunks = fixed_sized_chunking(text, overlap, chunk_size)
+    print(f"Chunking {len(text)} characters")
+    for i, chunk in enumerate(chunks):
+        print(f"{i}. {chunk}")
+
+
+def search(query: str, limit: int = 5):
     ss = SemanticSearch()
     movies = load_movies()
     ss.load_or_create_embeddings(movies)
@@ -75,7 +122,7 @@ def search(query, limit=5):
         print(res["description"][:100])
 
 
-def embed_query_text(query):
+def embed_query_text(query: str):
     ss = SemanticSearch()
     embedding = ss.generate_embedding(query)
     print(f"Query: {query}")
@@ -103,7 +150,7 @@ def cosine_similarity(vec1, vec2):
     return dot_product / (norm1 * norm2)
 
 
-def embed_text(text):
+def embed_text(text: str):
     ss = SemanticSearch()
     embedding = ss.generate_embedding(text)
     print(f"Text: {text}")
