@@ -3,6 +3,7 @@ import argparse
 from lib.semantic_search import (
     chunk_text,
     chunk_text_semantic,
+    embed_chunks,
     embed_query_text,
     embed_text,
     search,
@@ -67,9 +68,14 @@ def main():
         help="Number of sentences in each fixed size chunk",
     )
 
+    embedquery_parser = subparsers.add_parser(
+        "embed_chunks", help="Create embeddings for semantic chunks"
+    )
     args = parser.parse_args()
 
     match args.command:
+        case "embed_chunks":
+            embed_chunks()
         case "semantic_chunk":
             chunk_text_semantic(args.text, args.overlap, args.max_chunk_size)
         case "chunk":
