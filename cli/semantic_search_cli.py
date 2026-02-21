@@ -7,6 +7,7 @@ from lib.semantic_search import (
     embed_query_text,
     embed_text,
     search,
+    search_chunked,
     verify_embeddings,
     verify_model,
 )
@@ -35,6 +36,16 @@ def main():
     search_parser = subparsers.add_parser("search", help="Search for a relevant movie")
     search_parser.add_argument("query", type=str, help="User query to search based on")
     search_parser.add_argument(
+        "--limit", type=int, default=5, help="Number of results return"
+    )
+
+    search_chunked_parser = subparsers.add_parser(
+        "search_chunked", help="Search for a relevant movie"
+    )
+    search_chunked_parser.add_argument(
+        "query", type=str, help="User query to search based on"
+    )
+    search_chunked_parser.add_argument(
         "--limit", type=int, default=5, help="Number of results return"
     )
 
@@ -71,9 +82,12 @@ def main():
     embedquery_parser = subparsers.add_parser(
         "embed_chunks", help="Create embeddings for semantic chunks"
     )
+
     args = parser.parse_args()
 
     match args.command:
+        case "search_chunked":
+            search_chunked(args.query, args.limit)
         case "embed_chunks":
             embed_chunks()
         case "semantic_chunk":
